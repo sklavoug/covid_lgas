@@ -133,29 +133,32 @@ dates = dates[:1]
 # To fix this, we have to merge on each date and then fillna as 0, so the other LGAs
 # still appear.
 
-fig, (ax1, ax2) = plt.subplots(ncols=2, sharex=False, sharey=False)
-fig.set_figsize = (20,8)
-ax1.set_xlim(140,154)
-ax2.set_xlim(149,152)
-ax2.set_ylim(33,34)
+# fig, (ax1, ax2) = plt.subplots(ncols=2, sharex=False, sharey=False)
+# fig.set_figsize = (20,8)
+# ax1.set_xlim(140,154)
+# ax2.set_xlim(149,152)
+# ax2.set_ylim(33,34)
 
 for i in dates:
     print(i)
     temp = df.loc[df['notification_date'] == i]
     merged = pd.merge(lgas, temp, how='left', right_on='lga_code19', left_on='LGA_CODE21')
     merged['count'] = merged['count'].fillna(0)
-    merged.plot(column='count', 
-                cmap='Reds', 
-                vmax=max_color,
-                edgecolor='black',
-                ax=ax1)
-    merged.plot(column='count', 
-                cmap='Reds', 
-                vmax=max_color,
-                edgecolor='black',
-                ax=ax2)
+    ax = merged.plot(column='count', 
+                    cmap='Reds', 
+                    vmax=max_color,
+                    edgecolor='black',
+                    figsize=(20,8))
+    # merged.plot(column='count', 
+    #             cmap='Reds', 
+    #             vmax=max_color,
+    #             edgecolor='black',
+    #             ax=ax2)
     # ax.set_axis_off()
+    ax.set_xlim(150,152)
+    ax.set_ylim(35,33)
     # ax.set_xlim(140,154)
+    ax.set_title(f'{i}')
     # fig.set_title(i)
     plt.savefig(f'{i}.jpg')
 
