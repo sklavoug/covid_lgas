@@ -156,17 +156,23 @@ def clean(df):
 # ax2.set_xlim(149,152)
 # ax2.set_ylim(33,34)
 
-def visualise(df, lgas, i):
+def vis_helper(df, lgas, i):
     print(f'{idx}/{len(dates)}: {i}')
     temp = df.loc[df['notification_date'] == i]
+    
+    
     merged = pd.merge(lgas, temp, how='left', right_on='lga_code19', left_on='LGA_CODE21')
     merged['count'] = merged['count'].fillna(0)
     # print(merged)
     syd = merged.loc[merged['Region'] == 'Sydney']
     reg = merged.loc[merged['Region'] == 'Regional']
     
+    return syd, reg
+
+def visualise(df, lgas, i):
+    syd, reg = vis_helper(df, lgas, i)
+    
     fig, (ax1, ax2) = plt.subplots(ncols=2, facecolor='black', sharex=False, sharey=False, figsize=(20,8))
-    fig.tight_layout()
     ax1.set_title('Regional', y=0, color='white')
     ax2.set_title('Sydney', y=0, color='white')
     ax1.set_axis_off()
@@ -190,6 +196,83 @@ def visualise(df, lgas, i):
     plt.savefig(f'./output/{i}.jpg')
     plt.close('all')
 
+def visualise_w_vacc(df, lgas, i):
+    
+    temp = df.loc[df['notification_date'] == i]
+    
+    first_vacc = int(temp['First'].unique()[0]) / 6565651 * 100
+    second_vacc = int(temp['Second'].unique()[0]) / 6565651 * 100
+    
+    # num_vacc = 91
+    # prop_vacc = int(num_vacc) / 6565651
+    
+    vacc = {'Second': [second_vacc],
+            'First': [first_vacc-second_vacc],
+            'Total': [100-first_vacc]}
+    
+    vacc_df = pd.DataFrame.from_dict(vacc)
+    
+    # print(vacc_df)
+    
+    syd, reg = vis_helper(df, lgas, i)
+    
+
+    fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, 
+                                        facecolor='black', 
+                                        sharex=False, 
+                                        sharey=False, 
+                                        figsize=(20,8),
+                                        gridspec_kw={'width_ratios': [10,10,1]})
+    # ax3.set_figsize((2,8))
+    ax3.set_facecolor('black')
+    ax3.text(-1, first_vacc, round(first_vacc,2), ha='left',
+          weight='bold', color='goldenrod')
+    ax3.text(-1, vacc['Second'][0], round(vacc['Second'][0],2), ha='left',
+             weight='bold', color='lightseagreen')
+    ax3.text(0.5, first_vacc, 'First', ha='left', color='white')
+    ax3.text(0.5, second_vacc, 'Second', ha='left', color='white')
+    # ax3.bar_label(labels=round(vacc['Vacc'][0],2))
+    # ax3.set_axis_bgcolor('black')
+    vacc_plot = vacc_df.plot(ax=ax3,
+                             kind='bar',
+                             stacked=True,
+                             color={'First': 'goldenrod',
+                                    'Second': 'lightseagreen',
+                                    'Total': 'black'},
+                             edgecolor='white',
+                             legend=False)
+    # vacc_plot.bar_label(round(vacc['Vacc'][0],2))
+    # for c in vacc_plot.containers[::2]:
+    #     vacc_plot.bar_label(c, label_type='edge', fmt='%0.1f', padding=10)
+    
+    # vacc_plot.set_axis_bgcolor('black')
+    
+    ax1.set_title('Regional', y=0, color='white')
+    ax2.set_title('Sydney', y=0, color='white')
+    ax3.set_title('Vaccinations', y=1, color='white')
+    ax1.set_axis_off()
+    ax2.set_axis_off()
+    plt.subplots_adjust(wspace=0)
+    ax1.set_xlim(140, 154)
+    
+    syd.plot(column='count',
+             cmap='plasma',
+             vmax=max_color,
+             edgecolor='black',
+             ax=ax2)
+    
+    reg.plot(column='count',
+             cmap='plasma',
+             vmax=max_color,
+             edgecolor='black',
+             ax=ax1)
+    
+    fig.suptitle(f'Cases and Vaccinations\n{i}', fontsize=16, color='white')
+    plt.savefig(f'./output_vacc/vacc_{i}.jpg')
+    plt.close('all')
+    # print(syd, reg)
+    
+    
 # Great! After merging we only lost about 400 rows, but checking the initial extract
 # it looks like a few rows didn't have LGAs, which is fine. An expansion might be to clean
 # this data a bit more rigorously, but what we have should suffice for now (and in the overall
@@ -205,30 +288,62 @@ def visualise(df, lgas, i):
 
 # extract_from_api(url)
 
-def create_gif():
+def create_gif(vis_type):
+    if vis_type == 'vacc':
+        directory = './output_vacc'
+        filename = 'visualisation_vacc.gif'
+    else:
+        directory = './output'
+        filename = 'visualisation.gif'
+        
     images = []
-    for file_idx, filename in enumerate(os.listdir('./output')):
+    for file_idx, filename in enumerate(os.listdir(directory)):
         if filename[-4:] == '.jpg':
             print(file_idx)
-            images.append(imageio.imread(f'./output/{filename}'))
-    imageio.mimsave('visualisation.gif', images, fps=40, subrectangles=True)
+            images.append(imageio.imread(f'{directory}/{filename}'))
+    imageio.mimsave('visualisation_vacc.gif', images, fps=30, subrectangles=True)
 
 
 # With our second query we've got only what we wanted and we've extracted all the data,
 # all 77,000 rows of it.
-# url = 'https://data.nsw.gov.au/data/api/3/action/datastore_search_sql?sql=SELECT%20notification_date,lga_code19,lga_name19%20from%20%2221304414-1ff1-4243-a5d2-f52778048b29%22%20'
+url = 'https://data.nsw.gov.au/data/api/3/action/datastore_search_sql?sql=SELECT%20notification_date,lga_code19,lga_name19%20from%20%2221304414-1ff1-4243-a5d2-f52778048b29%22%20'
 
-# df = extract_from_api(url)
+df = extract_from_api(url)
 
-# df, lgas = clean(df)
+df, lgas = clean(df)
 
-# max_color = df['count'].max()
-    
 # dates = list(df['notification_date'].unique())
 
 # for idx, date in enumerate(dates):
 #     if idx == 0:
 #         visualise(df, lgas, date)
 
-create_gif()
+# create_gif()
 # imageio.help('gif')
+
+# Vaccination data sourced from https://www.health.gov.au/resources/collections/covid-19-vaccination-daily-rollout-update
+vacc = pd.read_csv('vaccinations.csv')
+vacc = vacc.fillna(0)
+
+# print(df, vacc)
+
+df = pd.merge(df, vacc, how='left', left_on='notification_date', right_on='Date')
+
+print(df)
+
+max_color = df['count'].max()
+
+df = df.dropna(subset=['Date'])
+
+# print(df)
+
+dates = list(df['notification_date'].unique())
+
+print(dates)
+
+for idx, date in enumerate(dates):
+    visualise_w_vacc(df, lgas, date)
+    
+create_gif('vacc')
+
+
