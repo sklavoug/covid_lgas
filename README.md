@@ -1,5 +1,5 @@
 # covid_lgas
-Visualisation of COVID cases by NSW LGAs over time
+Visualisation of COVID cases by NSW LGAs over time using pandas and geopandas.
 
 ![](https://github.com/sklavoug/covid_lgas/blob/main/visualisation.gif)
 
